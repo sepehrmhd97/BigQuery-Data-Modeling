@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "snappy-nomad-382716",
+  "private_key_id": "83c02c3de2b8015435f1fc2edfa2d941f30d51c0",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC83cFcLuTUw2/J\nirZ0B1nWrzPfRaClQbbLPr21mtKVJO1mUHNAOdJ2FCnPLLC0SGhZT2qYNvP0OF/I\nzCMG39WFB68UG/Wi2fJOdWBE6zlvoYVm6uCoKLGdcalQ1MJPIBfJhfBCAWle9xwO\nm97TnF5OW9furlTeLZpaQbhZVTzOLDaO6nHKGEllFgaqxe4xi1U/0p4KpfvlpRXJ\nr9gOfdH2tHha/kWZB44L0h5TUTp44xUhA86UUZDZ+mP0v6u0NRJHAcw3nmZytHUp\nyVYo3m0gjAatoDyoF/Sl812Y+QP73yjxLKTZj4zGHzaQgTPrhCIk4m+NbHwAZ+Sj\nAPh2hS41AgMBAAECggEADsepKsDzYMBtQ8UP2NinwSiI01TW6NfRqZTJXSg2iTwQ\nj/cvwxDuABY9MgdPShcjLgoMT3PNd4k0hbmOltUhbShYHSdq+57kBXEjYtaoR1dz\n4cVJEMp5ISxp5vd0v/hvpBz6hk/R99U4Dt9H0CDmiGn2O1QiiW3hgbqu5d7JGWEz\nPRmiTZ81/aBrIrAUCSSu0+GxUOI2DoRI7JsRz3o1mhAHmFOUoNB8Rwnqd6nV477T\nQo6A/q4RjXOsvc4bO42vwB8RSEW/BTdlQrrErHbFVYUqTeCQ4jjS5lHRdMKUoSpJ\nlQaV2lxawZH5ZbtFBsGwylSVjk7nVxzhulRXlKDVgQKBgQDpH6MeyJQoGmVwf6+h\nltaNk5Tk8x/MJLXgxmlj5zjj18S+63Tpju6v1N0r1sYjIk+C//SxZUNQugedMjQ6\nzoso+9qWfIKkG5/zAg0mclHjPBYFtH09ORYv7+QxOqeFLGvjlZ3QPFzf1JrJde0c\njGqzscd9BB+SfJg/wq1VCrdLJQKBgQDPZlEaq/w2ew3bdl2b6LRy2tYSaXFGYQNV\nlG4IV4UZ1VAUEIFb0e+/7E6NtiF1f+/20quSU4ptvPziCi5YwUeDPhncv3MdAVZ5\nEHkYsMDTr7ElU4HEGDwuG+JkxwGHJG1gerrpdvxPzgpzcO6qr/5ESV+0EGpYuc8A\nyyAyVKfx0QKBgEr1mkzesA0JF88Jr56k0s5pQvovVu0cbMMe6WpvQfK5QZEmQsyK\n4iL1rjxXbhSEBs8XoEWeSvvdJW+dYf/6w/JksU+sL5G3NEI+SZ4wKjaH7ojdFVwn\nTAQT/er6cj03IGXoiPsZPb/XLAJVge2pFPI82ulO9xvyJj5ySavLq05lAoGAFr9O\nHfLHEuKkPnHZCoSXZhGCcTqHZgS17Oj+uIOA4bh3s/urdHquJQqyAvD68nw5wYSR\ntNbc0/RqeBBNzQZF5asmAwQsh/3hkh2wanjYbV9TuphSH0PZNeVxC0SYck4YgQB1\nB645NjePBeJZCveKl8rEaGd0go6+mYOt4FdQpEECgYEAuINo2TkZCXa6tARr01HD\nMquu1QLwKau8DXsrKFFXEWPpsY9Qj6oIwaqzRJeC9RKrXIgD46l2u+v/vzDOwgRV\nvXtRcBDPEdpKcQWEju9OkjOAv8/SjnYImOYyDR5pkMYveQ3Ym0NCmsNOC7UqcdQ0\nGVeYYNknRvtMqWsiqTwYJIo=\n-----END PRIVATE KEY-----\n",
+  "client_email": "etl-setup@snappy-nomad-382716.iam.gserviceaccount.com",
+  "client_id": "111398624767371338715",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/etl-setup%40snappy-nomad-382716.iam.gserviceaccount.com"
+}
