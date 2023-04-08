@@ -1,0 +1,130 @@
+{
+  "fact_table_name": "sales_fact",
+  "fact_table_columns": [
+    {
+      "name": "order_id",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "product_id",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "customer_id",
+      "type": "STRING",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "order_date",
+      "type": "DATE",
+      "mode": "REQUIRED"
+    },
+    {
+      "name": "sales",
+      "type": "FLOAT",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "quantity",
+      "type": "INTEGER",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "discount",
+      "type": "FLOAT",
+      "mode": "NULLABLE"
+    },
+    {
+      "name": "profit",
+      "type": "FLOAT",
+      "mode": "NULLABLE"
+    }
+  ],
+  "dimension_tables": {
+    "date_dim": [
+      {
+        "name": "order_date",
+        "type": "DATE",
+        "mode": "REQUIRED"
+      },
+      {
+        "name": "ship_date",
+        "type": "DATE",
+        "mode": "REQUIRED"
+      }
+    ],
+    "customer_dim": [
+      {
+        "name": "customer_id",
+        "type": "STRING",
+        "mode": "REQUIRED"
+      },
+      {
+        "name": "customer_name",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "segment",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "country",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "city",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "state",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "postal_code",
+        "type": "INTEGER",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "region",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      }
+    ],
+    "product_dim": [
+      {
+        "name": "product_id",
+        "type": "STRING",
+        "mode": "REQUIRED"
+      },
+      {
+        "name": "category",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "sub_category",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      },
+      {
+        "name": "product_name",
+        "type": "STRING",
+        "mode": "NULLABLE"
+      }
+    ]
+  },
+  "fact_dimension_key_map": {
+    "order_id": {
+      "order_date": "date_dim",
+      "customer_id": "customer_dim",
+      "product_id": "product_dim"
+    }
+  }
+}

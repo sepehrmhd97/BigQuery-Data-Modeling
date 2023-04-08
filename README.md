@@ -129,12 +129,12 @@ def load_csv_to_bigquery(csv_path, project_id, table_name):
     print("Data uploaded to BigQuery successfully.")
 ```
 
-### Data Tranformation
+### 2. Data Tranformation
 
 This Python function is an example of a data cleaning and uploading function that can be used as part of an ETL pipeline. The function takes the project ID and table ID as input, with optional arguments for cleaning data (e.g. removing null values, duplicates, and converting date values). The function then cleans the data, and uploads it to a new table in BigQuery.
 
 ``` python
-def clean_bigquery_table(project_id, table_id,remove_nulls=False,remove_duplicates=False, date_column=None, columns_to_check=None):
+def clean_bigquery_table(project_id, table_id, remove_nulls=False, remove_duplicates=False, date_columns=None, columns_to_check=None):
     """
     Clean a BigQuery table by removing null values and/or duplicates.
 
@@ -144,6 +144,7 @@ def clean_bigquery_table(project_id, table_id,remove_nulls=False,remove_duplicat
         remove_nulls (bool, optional): Whether to remove rows with null values. Defaults to False.
         columns_to_check (list, optional): List of columns to check for null values or duplicates. Defaults to None (all columns).
         remove_duplicates (bool, optional): Whether to remove duplicate rows. Defaults to False.
+        date_columns (list, optional): List of columns to convert to date format. Defaults to None.
 
     Returns:
         None
@@ -171,16 +172,19 @@ def clean_bigquery_table(project_id, table_id,remove_nulls=False,remove_duplicat
         sql_condition = "WHERE " + " AND ".join(sql_conditions)
     else:
         sql_condition = ""
-        
-    # Handle date column transformation
-    if date_column:
-        select_columns = [f"SAFE.PARSE_DATE('%Y-%m-%d', {date_column}) AS {date_column}"]
-    else:
-        select_columns = ["*"]
 
-    sql = f"{deduplicate_clause} * FROM ({sql_base}) AS subquery {sql_condition}"
+    # Handle date column transformation, and make all columns lower case
+    select_columns = []
+    for column in table.schema:
+        if column.name in date_columns:
+            select_columns.append(f"PARSE_DATE('%d-%m-%Y', REGEXP_REPLACE({column.name}, r'/', '-')) AS {column.name.lower()}")
+        else:
+            select_columns.append(column.name.lower())
 
-    # Execute the query and save the results to a new table 
+
+        sql = f"{deduplicate_clause} {', '.join(select_columns)} FROM ({sql_base}) AS subquery {sql_condition}"
+
+    # Execute the query and save the results to a new table
     new_table_id = f"{project_id}.{table_ref.dataset_id}.{table_ref.table_id}_cleaned"
     new_table_ref = client.dataset(table_ref.dataset_id).table(f"{table_ref.table_id}_cleaned")
 
@@ -189,12 +193,57 @@ def clean_bigquery_table(project_id, table_id,remove_nulls=False,remove_duplicat
     query_job.result()
 
     print(f"Cleaned table saved as {new_table_id}.")
+
 ```
 Whether to keep the original table or replace it with the cleaned one depends on your specific use case and requirements. Here are some factors to consider when making this decision:
 
 - *Data history and traceability:* If you need to maintain a record of the original data for auditing, traceability, or historical analysis purposes, it is better to keep the original table and create a separate cleaned table. This way, you can always refer back to the original data if needed.
 
 - *Data storage costs:* Storing multiple versions of the same table may increase your storage costs in BigQuery. If storage costs are a concern and you're confident that you won't need to access the original data again, you can consider replacing the original table with the cleaned one.
+
+### 3. Create the Warehouse Schema
+
+The warehouse schema is the final schema that will be used for analysis and reporting. It is the schema that will be used by the end users to query the data. The warehouse schema is usually a simplified version of the staging schema, with only the columns that are relevant to the end users. It is also usually denormalized, meaning that it contains data from multiple tables in the staging schema.
+
+The `create_warehouse_schema` function creates the fact and dimension tables for the warehouse.
+
+``` python
+
+def create_warehouse_schema(project_id, staging_table_id, fact_table_name, fact_table_columns, dimension_tables, fact_dimension_key_map):
+    # Initialize BigQuery client
+    client = bigquery.Client(project=project_id)
+
+    # Create a dataset named "warehouse" (if it doesn't already exist)
+    dataset_id = "warehouse"
+    dataset_ref = client.dataset(dataset_id)
+    try:
+        client.get_dataset(dataset_ref)
+    except:
+        dataset = bigquery.Dataset(dataset_ref)
+        dataset.location = "US"
+        dataset = client.create_dataset(dataset)
+
+    # Define fact table schema
+    fact_schema = [bigquery.SchemaField(field.name, field.field_type, mode=field.mode) for field in fact_table_columns]
+
+    # Create fact table
+    fact_table_ref = client.dataset(dataset_id).table(fact_table_name)
+    fact_table = bigquery.Table(fact_table_ref, schema=fact_schema)
+    fact_table.time_partitioning = bigquery.TimePartitioning(
+        type_=bigquery.TimePartitioningType.DAY,
+        field="order_date",
+    )
+    fact_table = client.create_table(fact_table)  # API request
+
+    # Create dimension tables
+    for dimension_table_name, dimension_table_columns in dimension_tables.items():
+        dimension_schema = [bigquery.SchemaField(field.name, field.field_type, mode=field.mode) for field in dimension_table_columns]
+        dimension_table_ref = client.dataset(dataset_id).table(dimension_table_name)
+        dimension_table = bigquery.Table(dimension_table_ref, schema=dimension_schema)
+        dimension_table = client.create_table(dimension_table)  # API request
+
+    
+```
 
 
 
