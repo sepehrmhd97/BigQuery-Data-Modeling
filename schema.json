@@ -52,7 +52,7 @@
       {
         "name": "ship_date",
         "type": "DATE",
-        "mode": "REQUIRED"
+        "mode": "NULLABLE"
       }
     ],
     "customer_dim": [
