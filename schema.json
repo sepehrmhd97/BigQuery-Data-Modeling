@@ -23,7 +23,7 @@
     },
     {
       "name": "sales",
-      "type": "FLOAT",
+      "type": "FLOAT64",
       "mode": "NULLABLE"
     },
     {
@@ -33,12 +33,12 @@
     },
     {
       "name": "discount",
-      "type": "FLOAT",
+      "type": "FLOAT64",
       "mode": "NULLABLE"
     },
     {
       "name": "profit",
-      "type": "FLOAT",
+      "type": "FLOAT64",
       "mode": "NULLABLE"
     }
   ],
