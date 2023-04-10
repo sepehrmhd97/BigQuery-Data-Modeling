@@ -305,7 +305,7 @@ def load_data_from_staging_to_warehouse(project_id, dataset_warehouse, dataset_s
 
 ## Usage
 
-By running the below code snippet, you can create a data warehouse schema in BigQuery based on the schema information provided in the JSON file for the superstore dataset.
+By running the below code snippet, you can create a data warehouse in BigQuery based on the schema information provided in the JSON file for the superstore dataset.
 
 ``` python
 #loading data
