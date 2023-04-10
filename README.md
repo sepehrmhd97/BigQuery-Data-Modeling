@@ -21,7 +21,7 @@ A staging area is a temporary storage location where data is copied before it is
 A data mart is a subset of a data warehouse that contains a specific set of data that is relevant to a particular business function or department. Data marts are often used to create reports and dashboards for a specific department or business function.
 
 ### Pre-requisites
-To work with the code in this repository, you will need a Google Cloud Platform account with billing enabled, access to the Google Analytics sample dataset in BigQuery, and Python 3.6 or later installed on your machine.
+To work with the code in this repository, you will need a Google Cloud Platform account and Python 3.6 or later installed on your machine.
 
 - install BigQuery: `pip install google-cloud-bigquery`
 - Create a service account and download the JSON key file from the Google Cloud Console. You can follow the instructions in the [BigQuery documentation](https://developers.google.com/workspace/guides/create-credentials) to do this.
@@ -203,15 +203,24 @@ Whether to keep the original table or replace it with the cleaned one depends on
 
 ### 3. Create the Warehouse Schema
 
-The warehouse schema is the final schema that will be used for analysis and reporting. It is the schema that will be used by the end users to query the data. The warehouse schema is usually a simplified version of the staging schema, with only the columns that are relevant to the end users. It is also usually denormalized, meaning that it contains data from multiple tables in the staging schema.
+The warehouse schema is the final schema that will be used for analysis and reporting. It is the schema that will be used by the end users to query the data. It is also usually denormalized, meaning that it contains data from multiple tables in the staging schema.
 
-The `create_warehouse_schema` function creates the fact and dimension tables for the warehouse.
+The `create_warehouse_schema`  function creates a data warehouse schema in Google BigQuery based on the input provided in a JSON file. The schema consists of a fact table, dimension tables, and mapping tables to link them together.
+
+The function takes as inputs the GCP project ID and the path to the JSON file containing the schema information. The fact and dimension tables are created with their corresponding columns, and the mapping tables are created to link the fact table to each dimension table based on the specified keys.
+
+Overall, this function provides a simple and efficient way to set up a data warehouse schema for dimensional data modeling using the Google BigQuery platform.
 
 ``` python
 
-def create_warehouse_schema(project_id, staging_table_id, fact_table_name, fact_table_columns, dimension_tables, fact_dimension_key_map):
+#creating a warehouse schema from json file
+def create_warehouse_schema(project_id, json_path):
     # Initialize BigQuery client
     client = bigquery.Client(project=project_id)
+
+    # Load the schema information from the JSON file
+    with open(json_path, 'r') as f:
+        schema_info = json.load(f)
 
     # Create a dataset named "warehouse" (if it doesn't already exist)
     dataset_id = "warehouse"
@@ -224,26 +233,75 @@ def create_warehouse_schema(project_id, staging_table_id, fact_table_name, fact_
         dataset = client.create_dataset(dataset)
 
     # Define fact table schema
-    fact_schema = [bigquery.SchemaField(field.name, field.field_type, mode=field.mode) for field in fact_table_columns]
-
-    # Create fact table
+    fact_table_name = schema_info['fact_table_name']
+    fact_table_columns = [bigquery.SchemaField(field['name'], field['type'], mode=field.get('mode', 'NULLABLE')) for field in schema_info['fact_table_columns']]
     fact_table_ref = client.dataset(dataset_id).table(fact_table_name)
-    fact_table = bigquery.Table(fact_table_ref, schema=fact_schema)
-    fact_table.time_partitioning = bigquery.TimePartitioning(
-        type_=bigquery.TimePartitioningType.DAY,
-        field="order_date",
-    )
+    fact_table = bigquery.Table(fact_table_ref, schema=fact_table_columns)
     fact_table = client.create_table(fact_table)  # API request
 
     # Create dimension tables
-    for dimension_table_name, dimension_table_columns in dimension_tables.items():
-        dimension_schema = [bigquery.SchemaField(field.name, field.field_type, mode=field.mode) for field in dimension_table_columns]
+    for dimension_table_name, dimension_table_info in schema_info['dimension_tables'].items():
+        dimension_table_columns = [bigquery.SchemaField(field['name'], field['type'], mode=field.get('mode', 'NULLABLE')) for field in dimension_table_info]
         dimension_table_ref = client.dataset(dataset_id).table(dimension_table_name)
-        dimension_table = bigquery.Table(dimension_table_ref, schema=dimension_schema)
+        dimension_table = bigquery.Table(dimension_table_ref, schema=dimension_table_columns)
         dimension_table = client.create_table(dimension_table)  # API request
+
+    # Create fact-dimension mapping tables
+    for fact_column, dimension_map in schema_info['fact_dimension_key_map'].items():
+        for dimension_column, dimension_table_name in dimension_map.items():
+            mapping_table_name = f"{fact_table_name}_{dimension_table_name}_{dimension_column}"
+            mapping_table_columns = [
+                bigquery.SchemaField(fact_column, 'STRING', mode='REQUIRED'),
+                bigquery.SchemaField(dimension_column, 'STRING', mode='REQUIRED'),
+            ]
+            mapping_table_ref = client.dataset(dataset_id).table(mapping_table_name)
+            mapping_table = bigquery.Table(mapping_table_ref, schema=mapping_table_columns)
+            mapping_table = client.create_table(mapping_table)  # API request
+
+    print("Warehouse schema created successfully.")
 
     
 ```
+
+### 4. Load the Data into the Warehouse
+
+This Python script provides a function to transfer data from a staging table to multiple warehouse tables in BigQuery. The function is designed to copy specific columns from the staging table to each warehouse table based on the schema of the warehouse tables.
+
+``` python
+#loading data from staging to warehouse
+def load_data_from_staging_to_warehouse(project_id, dataset_warehouse, dataset_staging, staging_table_id, warehouse_table_names):
+    # Initialize BigQuery client
+    client = bigquery.Client(project=project_id)
+
+    # Iterate through the warehouse table names
+    for warehouse_table_name in warehouse_table_names:
+        # Get the schema of the warehouse table
+        warehouse_table = client.get_table(f"{project_id}.{dataset_warehouse}.{warehouse_table_name}")
+        warehouse_columns = [field.name for field in warehouse_table.schema]
+
+        # Create a query to select and cast specific columns from the staging table
+        source_columns = ', '.join([f"CAST({field.name} AS {field.field_type.replace('FLOAT', 'FLOAT64')}) AS {field.name}" for field in warehouse_table.schema])
+        sql = f"""
+            SELECT {source_columns}
+            FROM `{project_id}.{dataset_staging}.{staging_table_id}`
+        """
+
+        # Create table references
+        destination_table_ref = f"{project_id}.{dataset_warehouse}.{warehouse_table_name}"
+
+        # Create a load job configuration
+        job_config = bigquery.QueryJobConfig()
+        job_config.destination = destination_table_ref
+        job_config.write_disposition = bigquery.WriteDisposition.WRITE_TRUNCATE
+
+        # Run the query job
+        query_job = client.query(sql, job_config=job_config)
+        query_job.result()
+
+        print(f"Data copied from {dataset_staging}.{staging_table_id} to {dataset_warehouse}.{warehouse_table_name}")
+```
+
+
 
 
 
