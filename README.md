@@ -131,7 +131,7 @@ def load_csv_to_bigquery(csv_path, project_id, table_name):
     print("Data uploaded to BigQuery successfully.")
 ```
 
-### 2. Data Tranformation
+### 2. Data Transformation
 
 This Python function is an example of a data cleaning and uploading function that can be used as part of an ETL pipeline. The function takes the project ID and table ID as input, with optional arguments for cleaning data (e.g. removing null values, duplicates, and converting date values). The function then cleans the data, and uploads it to a new table in BigQuery.
 
