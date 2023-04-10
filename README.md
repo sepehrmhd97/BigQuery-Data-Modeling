@@ -1,12 +1,7 @@
-# Dimensional Data Modeling in BigQuery
+# Data Warehousing in BigQuery
 
 This repository contains an example project that demonstrates how to create a dimensional data model with a star schema in BigQuery using the Python API. 
 
-### What is dimensional data modeling?
-
-Dimensional data modeling is a design technique used to organize data into a structure that is optimized for querying and reporting. It involves organizing data into "facts" (numerical data that can be aggregated) and "dimensions" (descriptive data that can be used to slice and filter the facts), and creating relationships between them. It is a common approach to data modeling in data warehouses.
-
-![Alt text](/Pictures/star-schema.png)
 
 ### What is a Data Warehousing?
 
@@ -20,6 +15,12 @@ A staging area is a temporary storage location where data is copied before it is
 **Data Mart**
 A data mart is a subset of a data warehouse that contains a specific set of data that is relevant to a particular business function or department. Data marts are often used to create reports and dashboards for a specific department or business function.
 
+### What is dimensional data modeling?
+
+Dimensional data modeling is a design technique used to organize data into a structure that is optimized for querying and reporting. It involves organizing data into "facts" (numerical data that can be aggregated) and "dimensions" (descriptive data that can be used to slice and filter the facts), and creating relationships between them. It is a common approach to data modeling in data warehouses.
+
+![Alt text](/Pictures/star-schema.png)
+
 ### Pre-requisites
 To work with the code in this repository, you will need a Google Cloud Platform account and Python 3.6 or later installed on your machine.
 
@@ -32,6 +33,7 @@ To work with the code in this repository, you will need a Google Cloud Platform 
 import os
 from google.cloud import bigquery
 import pandas as pd
+import json
 
 # Set the environment variable GOOGLE_APPLICATION_CREDENTIALS to the path of the JSON key file that you downloaded earlier.
 credentials = os.environ["GOOGLE_APPLICATION_CREDENTIALS"] ="path/to/your/credentials.json"
@@ -301,7 +303,35 @@ def load_data_from_staging_to_warehouse(project_id, dataset_warehouse, dataset_s
         print(f"Data copied from {dataset_staging}.{staging_table_id} to {dataset_warehouse}.{warehouse_table_name}")
 ```
 
+## Usage
 
+By running the below code snippet, you can create a data warehouse schema in BigQuery based on the schema information provided in the JSON file for the superstore dataset.
+
+``` python
+#loading data
+csv_path = "path to csv file"
+project_id = "your project id"
+table_name = "superstore"
+load_csv_to_bigquery(csv_path = csv_path, project_id = project_id, table_name = table_name)
+#clean the table
+table_id = "your_project_id.staging.superstore"
+date_columns=["Order_Date", "Ship_Date"]
+columns_to_check=["Customer_ID", "Order_Date", "Order_ID", "Product_ID"]
+clean_bigquery_table(project_id = project_id, table_id = table_id, remove_nulls=True, remove_duplicates=True, date_columns=date_columns, columns_to_check=columns_to_check)
+
+#creating warehouse schema from json file
+json_path = "path to json file"
+create_warehouse_schema(project_id = project_id, json_path = json_path)
+
+#loading data from staging to warehouse
+dataset_warehouse = "warehouse"
+dataset_staging = "staging"
+staging_table_id = "superstore_cleaned"
+warehouse_table_names = ["date_dim", "customer_dim", "product_dim", "sales_fact","sales_fact_customer_dim_customer_id", 
+                         "sales_fact_date_dim_order_date", "sales_fact_product_dim_product_id"]
+load_data_from_staging_to_warehouse(project_id, dataset_warehouse, dataset_staging, staging_table_id, warehouse_table_names)
+
+```
 
 
 
