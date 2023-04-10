@@ -1,6 +1,6 @@
 # Data Warehousing in BigQuery
 
-This repository contains an example project that demonstrates how to create a dimensional data model with a star schema in BigQuery using the Python API. 
+This repository contains an example project that demonstrates how to create a data warehouse with dimensional modeling in BigQuery using its API in Python. This project showcases an ETL processing with four functions that extracts data from a CSV file, loads it into a staging area, cleans the data, creates the warehouse schema, and loads the data into the warehouse. 
 
 
 ### What is a Data Warehousing?
