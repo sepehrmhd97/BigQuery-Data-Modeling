@@ -362,7 +362,7 @@ def generate_single_surrogate_key(table_id, surrogate_key_column, base_columns, 
 
 ``` 
 
-##### Handling Slowly Changing Dimensions (SCD):
+#### Handling Slowly Changing Dimensions (SCD):
 Slowly Changing Dimensions (SCD) are a common challenge in data warehousing, where dimensions of the data change over time. These changes can be new records, updates to existing records, or changes in the relationships between records. There are different types of SCDs, such as Type 1, Type 2, and Type 3, each representing various methods of handling these changes.
 ![Alt text](/Pictures/scd.png)
 
@@ -496,7 +496,7 @@ def join_staging_with_warehouse_tables(project_id, dataset_staging, staging_tabl
 
 ```
 
-## Usage
+## Usage - Global Superstore Data Warehouse
 
 By running the below code snippet, you can create a data warehouse in BigQuery based on the schema information provided in the JSON file for the superstore dataset.
 
