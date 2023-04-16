@@ -1,6 +1,6 @@
 # Data Warehousing in BigQuery
 
-This repository contains an example project that demonstrates how to create a data warehouse with dimensional modeling in BigQuery using its API in Python. This project showcases an ETL processing with four functions that extracts data from source files, loads it into a staging area, cleans abd transforms the data, creates the warehouse schema, and loads the data into the warehouse. Different information such as the schema of the data warehouse, the data sources, and the data transformations are stored in a JSON file. This allows the ETL process to be easily modified and extended to include new data sources and transformations.
+This repository contains an example project that demonstrates how to create a data warehouse with dimensional modeling in BigQuery using its API in Python, and implements a sample data pipeline for Global Superstore Dataset containing two sets od fata, orders and retuens. This project showcases an ETL processing with five functions that extracts data from source files, loads it into a staging area, cleans and transforms the data, creates the warehouse schema, and loads the data into the warehouse. Different information such as the schema of the data warehouse, the data sources, and the data transformations are stored in a JSON file. This allows the ETL process to be easily modified and extended to include new data sources and transformations.
 
 
 ### What is a Data Warehousing?
