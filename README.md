@@ -38,8 +38,70 @@ import json
 # Set the environment variable GOOGLE_APPLICATION_CREDENTIALS to the path of the JSON key file that you downloaded earlier.
 credentials = os.environ["GOOGLE_APPLICATION_CREDENTIALS"] ="path/to/your/credentials.json"
 ```
+### 1. Create the Warehouse Schema
 
-### 1. Loading the data into BigQuery - Staging Area
+The warehouse schema is the final schema that will be used for analysis and reporting. It is the schema that will be used by the end users to query the data. It is also usually denormalized, meaning that it contains data from multiple tables in the staging schema.
+
+The `create_warehouse_schema`  function creates a data warehouse schema in Google BigQuery based on the input provided in a JSON file. The schema consists of a fact table, dimension tables, and mapping tables to link them together.
+
+The function takes as inputs the GCP project ID and the path to the JSON file containing the schema information. The fact and dimension tables are created with their corresponding columns, and the mapping tables are created to link the fact table to each dimension table based on the specified keys.
+
+Overall, this function provides a simple and efficient way to set up a data warehouse schema for dimensional data modeling using the Google BigQuery platform.
+
+``` python
+
+#creating a warehouse schema from json file
+def create_warehouse_schema(project_id, json_path):
+    # Initialize BigQuery client
+    client = bigquery.Client(project=project_id)
+
+    # Load the schema information from the JSON file
+    with open(json_path, 'r') as f:
+        schema_info = json.load(f)
+
+    # Create a dataset named "warehouse" (if it doesn't already exist)
+    dataset_id = "warehouse"
+    dataset_ref = client.dataset(dataset_id)
+    try:
+        client.get_dataset(dataset_ref)
+    except:
+        dataset = bigquery.Dataset(dataset_ref)
+        dataset.location = "US"
+        dataset = client.create_dataset(dataset)
+
+    # Define fact table schema
+    fact_table_name = schema_info['fact_table_name']
+    fact_table_columns = [bigquery.SchemaField(field['name'], field['type'], mode=field.get('mode', 'NULLABLE')) 
+                          for field in schema_info['fact_table_columns']]
+    fact_table_ref = client.dataset(dataset_id).table(fact_table_name)
+    fact_table = bigquery.Table(fact_table_ref, schema=fact_table_columns)
+    fact_table = client.create_table(fact_table)  # API request
+
+    # Create dimension tables
+    for dimension_table_name, dimension_table_info in schema_info['dimension_tables'].items():
+        dimension_table_columns = [bigquery.SchemaField(field['name'], field['type'], mode=field.get('mode', 'NULLABLE'))
+                                   for field in dimension_table_info]
+        dimension_table_ref = client.dataset(dataset_id).table(dimension_table_name)
+        dimension_table = bigquery.Table(dimension_table_ref, schema=dimension_table_columns)
+        dimension_table = client.create_table(dimension_table)  # API request
+
+    # Create fact-dimension mapping tables
+    for fact_column, dimension_map in schema_info['fact_dimension_key_map'].items():
+        for dimension_column, dimension_table_name in dimension_map.items():
+            mapping_table_name = f"{fact_table_name}_{dimension_table_name}"
+            mapping_table_columns = [
+                bigquery.SchemaField(fact_column, 'INTEGER', mode='REQUIRED'),
+                bigquery.SchemaField(dimension_column, 'INTEGER', mode='REQUIRED'),
+            ]
+            mapping_table_ref = client.dataset(dataset_id).table(mapping_table_name)
+            mapping_table = bigquery.Table(mapping_table_ref, schema=mapping_table_columns)
+            mapping_table = client.create_table(mapping_table)  # API request
+
+    print("Warehouse schema created successfully.")
+
+    
+```
+### 2. Loading the data into BigQuery - Staging Area
 
 **From CSV source** :This Python function can be used to upload a CSV file to BigQuery. The function takes the path to the CSV file, the project ID, and the table name as arguments, and uploads the file to a dataset named 'staging' in BigQuery based on the schema defined in the JSON file
 
@@ -202,7 +264,7 @@ def load_csv_to_bigquery(csv_path, project_id, table_name):
     print("Data uploaded to BigQuery successfully.")
 ```
 
-### 2. Data Transformation
+### 3. Data Transformation
 
 **Step 1:** This Python function is an example of a data transform and loading function that can be used as part of an ETL pipeline. The function takes the project ID and table ID as input, with optional arguments for cleaning data  The function then perform below tasks on the the data, and uploads it to a new table in BigQuery.
 
@@ -367,71 +429,9 @@ Slowly Changing Dimensions (SCD) are a common challenge in data warehousing, whe
 ![Alt text](/Pictures/scd.png)
 
 Using surrogate keys is an effective way to manage SCDs. A surrogate key is a unique identifier, typically an integer, assigned to each record in a dimension table, independent of the natural or business keys. This ensures that the record can be uniquely identified even when the natural key or other attributes change. For instance, in an SCD Type 2 scenario, a new record with a new surrogate key is added to the dimension table when a change occurs, preserving the history of the original record while still maintaining a unique identifier for the new version of the record. By using surrogate keys, the data warehouse can effectively track the history of changes and maintain referential integrity, enabling accurate reporting and analysis over time.
-### 3. Create the Warehouse Schema
 
-The warehouse schema is the final schema that will be used for analysis and reporting. It is the schema that will be used by the end users to query the data. It is also usually denormalized, meaning that it contains data from multiple tables in the staging schema.
 
-The `create_warehouse_schema`  function creates a data warehouse schema in Google BigQuery based on the input provided in a JSON file. The schema consists of a fact table, dimension tables, and mapping tables to link them together.
-
-The function takes as inputs the GCP project ID and the path to the JSON file containing the schema information. The fact and dimension tables are created with their corresponding columns, and the mapping tables are created to link the fact table to each dimension table based on the specified keys.
-
-Overall, this function provides a simple and efficient way to set up a data warehouse schema for dimensional data modeling using the Google BigQuery platform.
-
-``` python
-
-#creating a warehouse schema from json file
-def create_warehouse_schema(project_id, json_path):
-    # Initialize BigQuery client
-    client = bigquery.Client(project=project_id)
-
-    # Load the schema information from the JSON file
-    with open(json_path, 'r') as f:
-        schema_info = json.load(f)
-
-    # Create a dataset named "warehouse" (if it doesn't already exist)
-    dataset_id = "warehouse"
-    dataset_ref = client.dataset(dataset_id)
-    try:
-        client.get_dataset(dataset_ref)
-    except:
-        dataset = bigquery.Dataset(dataset_ref)
-        dataset.location = "US"
-        dataset = client.create_dataset(dataset)
-
-    # Define fact table schema
-    fact_table_name = schema_info['fact_table_name']
-    fact_table_columns = [bigquery.SchemaField(field['name'], field['type'], mode=field.get('mode', 'NULLABLE')) 
-                          for field in schema_info['fact_table_columns']]
-    fact_table_ref = client.dataset(dataset_id).table(fact_table_name)
-    fact_table = bigquery.Table(fact_table_ref, schema=fact_table_columns)
-    fact_table = client.create_table(fact_table)  # API request
-
-    # Create dimension tables
-    for dimension_table_name, dimension_table_info in schema_info['dimension_tables'].items():
-        dimension_table_columns = [bigquery.SchemaField(field['name'], field['type'], mode=field.get('mode', 'NULLABLE'))
-                                   for field in dimension_table_info]
-        dimension_table_ref = client.dataset(dataset_id).table(dimension_table_name)
-        dimension_table = bigquery.Table(dimension_table_ref, schema=dimension_table_columns)
-        dimension_table = client.create_table(dimension_table)  # API request
-
-    # Create fact-dimension mapping tables
-    for fact_column, dimension_map in schema_info['fact_dimension_key_map'].items():
-        for dimension_column, dimension_table_name in dimension_map.items():
-            mapping_table_name = f"{fact_table_name}_{dimension_table_name}"
-            mapping_table_columns = [
-                bigquery.SchemaField(fact_column, 'INTEGER', mode='REQUIRED'),
-                bigquery.SchemaField(dimension_column, 'INTEGER', mode='REQUIRED'),
-            ]
-            mapping_table_ref = client.dataset(dataset_id).table(mapping_table_name)
-            mapping_table = bigquery.Table(mapping_table_ref, schema=mapping_table_columns)
-            mapping_table = client.create_table(mapping_table)  # API request
-
-    print("Warehouse schema created successfully.")
-
-    
-```
-
-### 4. Load the Data into the Warehouse
+### 5. Load the Data into the Warehouse
 
 **Function 1:** This Python script provides a function to transfer data from a staging table to multiple warehouse tables in BigQuery. The function is designed to transfer specific columns from the staging table to each warehouse table based on the schema of the warehouse tables. it gets staging and warehouse dataset names, staging table name, and warehouse table names as inputs. It then iterates through the warehouse table names and gets the schema of each warehouse table. It then creates a query to select and cast specific columns from the staging table based on the schema of the warehouse table. It then executes the query and loads the data into the warehouse table.
 
