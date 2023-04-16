@@ -1,0 +1,22 @@
+[
+    {
+        "surrogate_key_column": "order_key",
+        "base_columns": ["order_id", "product_id"],
+        "starting_point": 1
+    },
+    {
+        "surrogate_key_column": "customer_key",
+        "base_columns": ["customer_id", "city"],
+        "starting_point": 1
+    },
+    {
+        "surrogate_key_column": "product_key",
+        "base_columns": ["product_id"],
+        "starting_point": 1
+    },
+    {
+        "surrogate_key_column": "date_key",
+        "base_columns": ["order_date"],
+        "starting_point": 1
+    }
+]

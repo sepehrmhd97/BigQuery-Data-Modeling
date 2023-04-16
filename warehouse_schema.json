@@ -1,24 +1,28 @@
 {
-  "fact_table_name": "sales_fact",
+  "fact_table_name": "fact_orders",
   "fact_table_columns": [
     {
-      "name": "order_id",
-      "type": "STRING",
+      "name": "order_key",
+      "type": "INTEGER",
       "mode": "REQUIRED"
     },
     {
-      "name": "product_id",
-      "type": "STRING",
+      "name": "product_key",
+      "type": "INTEGER",
       "mode": "REQUIRED"
     },
     {
-      "name": "customer_id",
-      "type": "STRING",
+      "name": "customer_key",
+      "type": "INTEGER",
       "mode": "REQUIRED"
     },
     {
-      "name": "order_date",
-      "type": "DATE",
+      "name": "date_key",
+      "type": "INTEGER",
+      "mode": "REQUIRED"
+    },
+    {"name": "order_id",
+      "type": "STRING",
       "mode": "REQUIRED"
     },
     {
@@ -40,22 +44,48 @@
       "name": "profit",
       "type": "FLOAT64",
       "mode": "NULLABLE"
+    },
+    {
+      "name": "returned",
+      "type": "BOOL",
+      "mode": "NULLABLE"
     }
   ],
   "dimension_tables": {
-    "date_dim": [
+    "date": [
+      {
+      "name": "date_key",
+      "type": "INTEGER",
+      "mode": "REQUIRED"
+      },
       {
         "name": "order_date",
         "type": "DATE",
         "mode": "REQUIRED"
       },
       {
-        "name": "ship_date",
-        "type": "DATE",
-        "mode": "NULLABLE"
+        "name": "order_date_year",
+        "type": "INTEGER",
+        "mode": "REQUIRED"
+      },
+      {
+        "name": "order_date_month",
+        "type": "INTEGER",
+        "mode": "REQUIRED"
+      },
+      {
+        "name": "order_date_day",
+        "type": "INTEGER",
+        "mode": "REQUIRED"
       }
+
     ],
-    "customer_dim": [
+    "customer": [
+      {
+        "name": "customer_key",
+        "type": "INTEGER",
+        "mode": "REQUIRED"
+      },
       {
         "name": "customer_id",
         "type": "STRING",
@@ -97,7 +127,12 @@
         "mode": "NULLABLE"
       }
     ],
-    "product_dim": [
+    "product": [
+      {
+      "name": "product_key",
+      "type": "INTEGER",
+      "mode": "REQUIRED"
+      },
       {
         "name": "product_id",
         "type": "STRING",
@@ -121,10 +156,10 @@
     ]
   },
   "fact_dimension_key_map": {
-    "order_id": {
-      "order_date": "date_dim",
-      "customer_id": "customer_dim",
-      "product_id": "product_dim"
+    "order_key": {
+      "date_key": "date",
+      "customer_key": "customer",
+      "product_key": "product"
     }
   }
 }

@@ -1,0 +1,14 @@
+[
+  {
+    "name": "returned",
+    "type": "BOOL"
+  },
+  {
+    "name": "order_id",
+    "type": "STRING"
+  },
+  {
+    "name": "region",
+    "type": "STRING"
+  }
+]
