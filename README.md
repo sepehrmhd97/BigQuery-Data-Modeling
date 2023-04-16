@@ -498,35 +498,38 @@ def join_staging_with_warehouse_tables(project_id, dataset_staging, staging_tabl
 
 ## Usage - Global Superstore Data Warehouse
 
-By running the below code snippet, you can create a data warehouse in BigQuery based on the schema information provided in the JSON file for the superstore dataset.
+This repository contains the implementation of a warehouse schema and data pipeline for a global superstore company. The data for the warehouse is extracted from two datasets: orders and returns. The warehouse schema defines the structure and relationships of the data that will be stored, including fact and dimesnsion tables that are created withe `create_warehouse_schema` . The data pipeline, implemented using several ETL processes, is responsible for extracting the data from the source datasets, transforming it into the appropriate format, and loading it into the warehouse.
+
+Here is the the pipeline for the orders data containing `load_xlsx_to_bigquery`, `data_transform`, `generate_surrogate_keys` and `load_data_from_staging_to_warehouse` functions:
 
 ``` python
-#loading data
-csv_path = "path to csv file"
-project_id = "your project id"
-table_name = "superstore"
-load_csv_to_bigquery(csv_path = csv_path, project_id = project_id, table_name = table_name)
-#clean the table
-table_id = "your_project_id.staging.superstore"
-date_columns=["Order_Date", "Ship_Date"]
-columns_to_check=["Customer_ID", "Order_Date", "Order_ID", "Product_ID"]
-clean_bigquery_table(project_id = project_id, table_id = table_id, remove_nulls=True, remove_duplicates=True, date_columns=date_columns, columns_to_check=columns_to_check)
-
-#creating warehouse schema from json file
-json_path = "path to json file"
-create_warehouse_schema(project_id = project_id, json_path = json_path)
-
-#loading data from staging to warehouse
-dataset_warehouse = "warehouse"
-dataset_staging = "staging"
-staging_table_id = "superstore_cleaned"
-warehouse_table_names = ["date_dim", "customer_dim", "product_dim", "sales_fact","sales_fact_customer_dim_customer_id", 
-                         "sales_fact_date_dim_order_date", "sales_fact_product_dim_product_id"]
-load_data_from_staging_to_warehouse(project_id, dataset_warehouse, dataset_staging, staging_table_id, warehouse_table_names)
+#data pipeline for orders dataset
+def orders_pipeline(xlsx_path, project_id, table_name , schema_file_path, date_columns, columns_to_check, sk_json_file, warehouse_table_names):
+    load_xlsx_to_bigquery(xlsx_path, project_id, table_name , schema_file_path)
+    table_id = f"{project_id}.staging.{table_name}"
+    data_transform(project_id, table_id, remove_nulls=True, remove_duplicates=True, date_columns=date_columns, columns_to_check=columns_to_check)
+    table_id = f"{project_id}.staging.{table_name}_cleaned"
+    generate_surrogate_keys(table_id, sk_json_file)
+    dataset_warehouse = "warehouse"
+    dataset_staging = "staging"
+    staging_table_id = f"{table_name}_cleaned"
+    load_data_from_staging_to_warehouse(project_id, dataset_warehouse, dataset_staging, staging_table_id, warehouse_table_names)
+    
 
 ```
 
+The pipeline for returns dataset contains `load_csv_to_bigquery`, `data_transform`,`join_staging_with_warehouse_tables` functions:
 
+``` python
+def returns_pipeline (csv_path , project_id , table_name, schema_file_path, columns_to_check, warehouse_table_names):
+    load_csv_to_bigquery(csv_path , project_id , table_name, schema_file_path)
+    table_id = f"{project_id}.staging.{table_name}"
+    data_transform(project_id , table_id, remove_nulls=True, remove_duplicates=True,date_columns=None, columns_to_check=columns_to_check)
+    staging_table_name = f"{table_name}_cleaned"
+    dataset_warehouse = "warehouse"
+    dataset_staging = "staging"
+    join_staging_with_warehouse_tables(project_id, dataset_staging, staging_table_name, dataset_warehouse, warehouse_table_names)
+```
 
 
 
