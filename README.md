@@ -1,6 +1,6 @@
 # Data Warehousing in BigQuery
 
-This repository contains an example project that demonstrates how to create a data warehouse with dimensional modeling in BigQuery using its API in Python. This project showcases an ETL processing with four functions that extracts data from a CSV file, loads it into a staging area, cleans the data, creates the warehouse schema, and loads the data into the warehouse. 
+This repository contains an example project that demonstrates how to create a data warehouse with dimensional modeling in BigQuery using its API in Python. This project showcases an ETL processing with four functions that extracts data from source files, loads it into a staging area, cleans abd transforms the data, creates the warehouse schema, and loads the data into the warehouse. Different information such as the schema of the data warehouse, the data sources, and the data transformations are stored in a JSON file. This allows the ETL process to be easily modified and extended to include new data sources and transformations.
 
 
 ### What is a Data Warehousing?
@@ -41,17 +41,21 @@ credentials = os.environ["GOOGLE_APPLICATION_CREDENTIALS"] ="path/to/your/creden
 
 ### 1. Loading the data into BigQuery - Staging Area
 
-This Python function can be used to upload a CSV file to BigQuery. The function takes the path to the CSV file, the project ID, and the table name as arguments, and uploads the file to a dataset named 'staging' in BigQuery.
+This Python function can be used to upload a CSV file to BigQuery. The function takes the path to the CSV file, the project ID, and the table name as arguments, and uploads the file to a dataset named 'staging' in BigQuery based on the schema defined in the JSON file
 
 ``` python
-#load data from local machine to bigquery - staging area
-def load_csv_to_bigquery(csv_path, project_id, table_name):
+#wxtracting data from csv file and loading it into staging area with the desired schema
+def load_csv_to_bigquery(csv_path, project_id, table_name, schema_file_path):
     dataset_name = 'staging'
-    # Create a BigQuery client 
+    # Create a BigQuery client using your service account key file
+    #credentials = service_account.Credentials.from_service_account_file(key_path)
     client = bigquery.Client(project=project_id)
 
     # Read the CSV file into a Pandas dataframe
-    df = pd.read_csv(csv_path)
+    df = pd.read_csv(csv_path, encoding='ISO-8859-1')
+
+    # Replace spaces and dashes with underscores in column names
+    df.columns = df.columns.str.lower().str.replace(' ', '_').str.replace('-', '_')
 
     # Create the BigQuery dataset if it doesn't exist
     dataset_ref = client.dataset(dataset_name)
@@ -67,9 +71,15 @@ def load_csv_to_bigquery(csv_path, project_id, table_name):
     table_ref = dataset_ref.table(table_name)
 
     # Define the schema of the table
-    schema = []
-    for column in df.columns:
-        schema.append(bigquery.SchemaField(column, 'STRING'))
+    with open(schema_file_path) as schema_file:
+        schema_json = json.load(schema_file)
+
+    # Replace spaces and hyphens with underscores in field names
+    for field in schema_json:
+        field['name'] = field['name'].replace(' ', '_').replace('-', '_')
+
+    # Create the schema field objects
+    schema = [bigquery.SchemaField.from_api_repr(field) for field in schema_json]
 
     # Create the table in BigQuery
     table = bigquery.Table(table_ref, schema=schema)
@@ -83,7 +93,9 @@ def load_csv_to_bigquery(csv_path, project_id, table_name):
     job = client.load_table_from_dataframe(df, table_ref, job_config=job_config)
     job.result()
 
-    print("Data uploaded to BigQuery successfully.")
+    print("Data loaded to Staging Area successfully.")
+
+
 
 ```
 
