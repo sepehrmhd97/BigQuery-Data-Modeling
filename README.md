@@ -400,14 +400,16 @@ def create_warehouse_schema(project_id, json_path):
 
     # Define fact table schema
     fact_table_name = schema_info['fact_table_name']
-    fact_table_columns = [bigquery.SchemaField(field['name'], field['type'], mode=field.get('mode', 'NULLABLE')) for field in schema_info['fact_table_columns']]
+    fact_table_columns = [bigquery.SchemaField(field['name'], field['type'], mode=field.get('mode', 'NULLABLE')) 
+                          for field in schema_info['fact_table_columns']]
     fact_table_ref = client.dataset(dataset_id).table(fact_table_name)
     fact_table = bigquery.Table(fact_table_ref, schema=fact_table_columns)
     fact_table = client.create_table(fact_table)  # API request
 
     # Create dimension tables
     for dimension_table_name, dimension_table_info in schema_info['dimension_tables'].items():
-        dimension_table_columns = [bigquery.SchemaField(field['name'], field['type'], mode=field.get('mode', 'NULLABLE')) for field in dimension_table_info]
+        dimension_table_columns = [bigquery.SchemaField(field['name'], field['type'], mode=field.get('mode', 'NULLABLE'))
+                                   for field in dimension_table_info]
         dimension_table_ref = client.dataset(dataset_id).table(dimension_table_name)
         dimension_table = bigquery.Table(dimension_table_ref, schema=dimension_table_columns)
         dimension_table = client.create_table(dimension_table)  # API request
@@ -415,10 +417,10 @@ def create_warehouse_schema(project_id, json_path):
     # Create fact-dimension mapping tables
     for fact_column, dimension_map in schema_info['fact_dimension_key_map'].items():
         for dimension_column, dimension_table_name in dimension_map.items():
-            mapping_table_name = f"{fact_table_name}_{dimension_table_name}_{dimension_column}"
+            mapping_table_name = f"{fact_table_name}_{dimension_table_name}"
             mapping_table_columns = [
-                bigquery.SchemaField(fact_column, 'STRING', mode='REQUIRED'),
-                bigquery.SchemaField(dimension_column, 'STRING', mode='REQUIRED'),
+                bigquery.SchemaField(fact_column, 'INTEGER', mode='REQUIRED'),
+                bigquery.SchemaField(dimension_column, 'INTEGER', mode='REQUIRED'),
             ]
             mapping_table_ref = client.dataset(dataset_id).table(mapping_table_name)
             mapping_table = bigquery.Table(mapping_table_ref, schema=mapping_table_columns)
