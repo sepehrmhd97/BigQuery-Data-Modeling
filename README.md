@@ -41,14 +41,13 @@ credentials = os.environ["GOOGLE_APPLICATION_CREDENTIALS"] ="path/to/your/creden
 
 ### 1. Loading the data into BigQuery - Staging Area
 
-This Python function can be used to upload a CSV file to BigQuery. The function takes the path to the CSV file, the project ID, and the table name as arguments, and uploads the file to a dataset named 'staging' in BigQuery based on the schema defined in the JSON file
+**From CSV source** :This Python function can be used to upload a CSV file to BigQuery. The function takes the path to the CSV file, the project ID, and the table name as arguments, and uploads the file to a dataset named 'staging' in BigQuery based on the schema defined in the JSON file
 
 ``` python
 #wxtracting data from csv file and loading it into staging area with the desired schema
 def load_csv_to_bigquery(csv_path, project_id, table_name, schema_file_path):
     dataset_name = 'staging'
     # Create a BigQuery client using your service account key file
-    #credentials = service_account.Credentials.from_service_account_file(key_path)
     client = bigquery.Client(project=project_id)
 
     # Read the CSV file into a Pandas dataframe
@@ -97,6 +96,66 @@ def load_csv_to_bigquery(csv_path, project_id, table_name, schema_file_path):
 
 
 
+```
+
+**From xslx source** :This Python function can be used to upload an xslx file to BigQuery. The function takes the path to the xslx file, the project ID, and the table name as arguments, and uploads the file to a dataset named 'staging' in BigQuery based on the schema defined in the JSON file
+
+``` python
+
+def load_xlsx_to_bigquery(xlsx_path, project_id, table_name, schema_file_path):
+    dataset_name = 'staging'
+    # Create a BigQuery client using your service account key file
+    #credentials = service_account.Credentials.from_service_account_file(key_path)
+    client = bigquery.Client(project=project_id)
+
+    # Read the xlsx file into a Pandas dataframe
+    df = pd.read_excel(xlsx_path, engine='openpyxl')
+
+    # Remove time part from datetime columns
+    for column in df.columns:
+        if df[column].dtype == 'datetime64[ns]':
+            df[column] = df[column].dt.date
+
+    # Replace spaces with underscores in column names
+    df.columns = df.columns.str.lower().str.replace(' ', '_').str.replace('-', '_')
+
+    # Create the BigQuery dataset if it doesn't exist
+    dataset_ref = client.dataset(dataset_name)
+    try:
+        client.get_dataset(dataset_ref)
+        print("Dataset {} already exists".format(dataset_name))
+    except:
+        print("Creating dataset {}".format(dataset_name))
+        dataset = bigquery.Dataset(dataset_ref)
+        client.create_dataset(dataset)
+
+    # Set the destination table for the data
+    table_ref = dataset_ref.table(table_name)
+
+    # Define the schema of the table
+    with open(schema_file_path) as schema_file:
+        schema_json = json.load(schema_file)
+
+    # Replace spaces with underscores in schema field names
+    for field in schema_json:
+        field['name'] = field['name'].replace(' ', '_')
+
+    # Create the schema field objects
+    schema = [bigquery.SchemaField.from_api_repr(field) for field in schema_json]
+
+    # Create the table in BigQuery
+    table = bigquery.Table(table_ref, schema=schema)
+    table = client.create_table(table)
+
+    # Load the data into the table
+    job_config = bigquery.LoadJobConfig()
+    job_config.source_format = bigquery.SourceFormat.CSV
+    job_config.skip_leading_rows = 1
+    job_config.autodetect = False # Set to True to automatically detect schema, False to use schema defined above
+    job = client.load_table_from_dataframe(df, table_ref, job_config=job_config)
+    job.result()
+
+    print("Data uploaded to BigQuery successfully.")
 ```
 
 #### BigQuery Schema autodetect, yes or no?
