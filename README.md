@@ -204,12 +204,17 @@ def load_csv_to_bigquery(csv_path, project_id, table_name):
 
 ### 2. Data Transformation
 
-This Python function is an example of a data cleaning and uploading function that can be used as part of an ETL pipeline. The function takes the project ID and table ID as input, with optional arguments for cleaning data (e.g. removing null values, duplicates, and converting date values). The function then cleans the data, and uploads it to a new table in BigQuery.
+**Step 1:** This Python function is an example of a data transform and loading function that can be used as part of an ETL pipeline. The function takes the project ID and table ID as input, with optional arguments for cleaning data  The function then perform below tasks on the the data, and uploads it to a new table in BigQuery.
+
+- Remove null values for columns to check that are primary keys of dimension tables
+- Remove duplicate rows for columns to check that are primary keys of dimension tables
+- Convert date columns to date format
+- Round float columns to a specified number of decimal places
 
 ``` python
-def clean_bigquery_table(project_id, table_id, remove_nulls=False, remove_duplicates=False, date_columns=None, columns_to_check=None):
+def data_transform(project_id, table_id, remove_nulls=False, remove_duplicates=False, date_columns=None, columns_to_check=None):
     """
-    Clean a BigQuery table by removing null values and/or duplicates.
+    Clean a BigQuery table by removing null values and/or duplicates, and rounding float columns.
 
     Args:
         project_id (str): The Google Cloud Project ID.
@@ -218,6 +223,7 @@ def clean_bigquery_table(project_id, table_id, remove_nulls=False, remove_duplic
         columns_to_check (list, optional): List of columns to check for null values or duplicates. Defaults to None (all columns).
         remove_duplicates (bool, optional): Whether to remove duplicate rows. Defaults to False.
         date_columns (list, optional): List of columns to convert to date format. Defaults to None.
+        float_rounding_decimal (int, optional): Number of decimal places to round float columns. Defaults to 2.
 
     Returns:
         None
@@ -232,30 +238,41 @@ def clean_bigquery_table(project_id, table_id, remove_nulls=False, remove_duplic
     sql_base = f"SELECT * FROM `{table_id}`"
     sql_conditions = []
 
+    #remove nulls for selected columns in columns to check
     if remove_nulls:
         not_null_conditions = [f"{column} IS NOT NULL" for column in columns_to_check]
         sql_conditions.append(" AND ".join(not_null_conditions))
 
+    #removes duplicates based on columns to check which are the primary keys of dimensions
     if remove_duplicates:
-        deduplicate_clause = "SELECT DISTINCT"
+        row_number_clause = f", ROW_NUMBER() OVER (PARTITION BY {', '.join(columns_to_check)} ORDER BY {', '.join([field.name for field in table.schema])}) AS row_number"
+        deduplicate_condition = "row_number = 1"
     else:
-        deduplicate_clause = "SELECT"
+        row_number_clause = ""
+        deduplicate_condition = "TRUE"
 
     if sql_conditions:
         sql_condition = "WHERE " + " AND ".join(sql_conditions)
     else:
         sql_condition = ""
 
-    # Handle date column transformation, and make all columns lower case
+    # Handle date column transformation, float column rounding, and make all columns lower case
     select_columns = []
+    if date_columns is None:
+        date_columns = []
+    #round the float values to 2 decimal places, extract year, mont, and day for dates columns
     for column in table.schema:
-        if column.name in date_columns:
-            select_columns.append(f"PARSE_DATE('%d-%m-%Y', REGEXP_REPLACE({column.name}, r'/', '-')) AS {column.name.lower()}")
+        if column.field_type == "FLOAT":
+            select_columns.append(f"ROUND({column.name}, {2}) AS {column.name.lower()}")
+        elif column.name in date_columns:
+            select_columns.append(f"CAST({column.name} AS DATE) AS {column.name.lower()}")
+            select_columns.append(f"EXTRACT(YEAR FROM CAST({column.name} AS DATE)) AS {column.name.lower()}_year")
+            select_columns.append(f"EXTRACT(MONTH FROM CAST({column.name} AS DATE)) AS {column.name.lower()}_month")
+            select_columns.append(f"EXTRACT(DAY FROM CAST({column.name} AS DATE)) AS {column.name.lower()}_day")
         else:
             select_columns.append(column.name.lower())
 
-
-        sql = f"{deduplicate_clause} {', '.join(select_columns)} FROM ({sql_base}) AS subquery {sql_condition}"
+    sql = f"SELECT {', '.join(select_columns)} FROM (SELECT {', '.join(select_columns)}{row_number_clause} FROM ({sql_base}) AS subquery {sql_condition}) AS subquery_with_row_number WHERE {deduplicate_condition}"
 
     # Execute the query and save the results to a new table
     new_table_id = f"{project_id}.{table_ref.dataset_id}.{table_ref.table_id}_cleaned"
@@ -263,9 +280,12 @@ def clean_bigquery_table(project_id, table_id, remove_nulls=False, remove_duplic
 
     job_config = bigquery.QueryJobConfig(destination=new_table_ref)
     query_job = client.query(sql, job_config=job_config)
+   
+
     query_job.result()
 
     print(f"Cleaned table saved as {new_table_id}.")
+
 
 ```
 Whether to keep the original table or replace it with the cleaned one depends on your specific use case and requirements. Here are some factors to consider when making this decision:
@@ -274,6 +294,79 @@ Whether to keep the original table or replace it with the cleaned one depends on
 
 - *Data storage costs:* Storing multiple versions of the same table may increase your storage costs in BigQuery. If storage costs are a concern and you're confident that you won't need to access the original data again, you can consider replacing the original table with the cleaned one.
 
+**Step 2:** Below function adds Surrogae key for all the considered tables in the data warehouse. The surrogate key is a unique identifier for each row in a table. It is used to link the fact table to the dimension tables. The surrogate key is usually an auto-incrementing integer. In this case, we are using the `ROW_NUMBER()` query function to generate the surrogate key. 
+
+This python function takes a JSON file as input which contains the following information:
+
+- `surrogate_key_column`: The name of the surrogate key column.
+- `base_columns`: The list of columns that will be used to generate the surrogate key.
+- `starting_point`: The starting point for the surrogate key. This is necessory because we may already have data from initial or previous loads in the warehouse that we dont want the surrogate keys to conflict.
+
+``` python
+def generate_surrogate_keys(table_id, json_file):
+    with open(json_file, 'r') as f:
+        surrogate_keys_data = json.load(f)
+
+    for data in surrogate_keys_data:
+        surrogate_key_column = data["surrogate_key_column"]
+        base_columns = data["base_columns"]
+        starting_point = data["starting_point"]
+
+        generate_single_surrogate_key(table_id, surrogate_key_column, base_columns, starting_point)
+
+def generate_single_surrogate_key(table_id, surrogate_key_column, base_columns, starting_point):
+    client = bigquery.Client()
+
+    # Prepare the base columns for use in the query
+    base_columns_str = ", ".join(base_columns)
+
+    temp_table_id = f"{table_id}_temp"
+
+    # Create a temporary table with unique combinations of base columns and surrogate keys
+    create_temp_table_query = f"""
+        CREATE OR REPLACE TABLE `{temp_table_id}` AS
+        SELECT
+            {base_columns_str},
+            ROW_NUMBER() OVER () + {starting_point} - 1 AS {surrogate_key_column}
+        FROM
+            (SELECT DISTINCT {base_columns_str} FROM `{table_id}`)
+    """
+
+    # Update the original table with the surrogate keys from the temporary table
+    update_original_table_query = f"""
+        CREATE OR REPLACE TABLE `{table_id}` AS
+        SELECT
+            A.*,
+            B.{surrogate_key_column}
+        FROM
+            `{table_id}` A
+        JOIN
+            `{temp_table_id}` B
+        ON
+            { " AND ".join([f"A.{col} = B.{col}" for col in base_columns]) }
+    """
+
+    # Drop the temporary table
+    drop_temp_table_query = f"""
+        DROP TABLE `{temp_table_id}`
+    """
+
+    # Execute the queries
+    client.query(create_temp_table_query).result()
+    client.query(update_original_table_query).result()
+    client.query(drop_temp_table_query).result()
+
+    print(f"Surrogate key '{surrogate_key_column}' generated for table '{table_id}' using columns '{base_columns_str}'.")
+
+
+
+``` 
+
+##### Handling Slowly Changing Dimensions (SCD):
+Slowly Changing Dimensions (SCD) are a common challenge in data warehousing, where dimensions of the data change over time. These changes can be new records, updates to existing records, or changes in the relationships between records. There are different types of SCDs, such as Type 1, Type 2, and Type 3, each representing various methods of handling these changes.
+![Alt text](/Pictures/scd.png)
+
+Using surrogate keys is an effective way to manage SCDs. A surrogate key is a unique identifier, typically an integer, assigned to each record in a dimension table, independent of the natural or business keys. This ensures that the record can be uniquely identified even when the natural key or other attributes change. For instance, in an SCD Type 2 scenario, a new record with a new surrogate key is added to the dimension table when a change occurs, preserving the history of the original record while still maintaining a unique identifier for the new version of the record. By using surrogate keys, the data warehouse can effectively track the history of changes and maintain referential integrity, enabling accurate reporting and analysis over time.
 ### 3. Create the Warehouse Schema
 
 The warehouse schema is the final schema that will be used for analysis and reporting. It is the schema that will be used by the end users to query the data. It is also usually denormalized, meaning that it contains data from multiple tables in the staging schema.
