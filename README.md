@@ -433,7 +433,9 @@ def create_warehouse_schema(project_id, json_path):
 
 ### 4. Load the Data into the Warehouse
 
-This Python script provides a function to transfer data from a staging table to multiple warehouse tables in BigQuery. The function is designed to copy specific columns from the staging table to each warehouse table based on the schema of the warehouse tables.
+**Function 1:** This Python script provides a function to transfer data from a staging table to multiple warehouse tables in BigQuery. The function is designed to transfer specific columns from the staging table to each warehouse table based on the schema of the warehouse tables. it gets staging and warehouse dataset names, staging table name, and warehouse table names as inputs. It then iterates through the warehouse table names and gets the schema of each warehouse table. It then creates a query to select and cast specific columns from the staging table based on the schema of the warehouse table. It then executes the query and loads the data into the warehouse table.
+
+This function is used for the main dataset that contains the most of data that we want to have in our warehouse; therefore it copies the data from staging to warehouse instead of joining.
 
 ``` python
 #loading data from staging to warehouse
@@ -450,7 +452,7 @@ def load_data_from_staging_to_warehouse(project_id, dataset_warehouse, dataset_s
         # Create a query to select and cast specific columns from the staging table
         source_columns = ', '.join([f"CAST({field.name} AS {field.field_type.replace('FLOAT', 'FLOAT64')}) AS {field.name}" for field in warehouse_table.schema])
         sql = f"""
-            SELECT {source_columns}
+            SELECT DISTINCT {source_columns}
             FROM `{project_id}.{dataset_staging}.{staging_table_id}`
         """
 
@@ -467,6 +469,31 @@ def load_data_from_staging_to_warehouse(project_id, dataset_warehouse, dataset_s
         query_job.result()
 
         print(f"Data copied from {dataset_staging}.{staging_table_id} to {dataset_warehouse}.{warehouse_table_name}")
+```
+
+**Function 2:**  This python function can be used to join data from staging to warehouse tables. 
+
+``` python
+def join_staging_with_warehouse_tables(project_id, dataset_staging, staging_table_name, warehouse_dataset, warehouse_table_names):
+    # Initialize BigQuery client
+    client = bigquery.Client(project=project_id)
+
+    # Iterate through the warehouse table names
+    for warehouse_table_name in warehouse_table_names:
+        # Create a query to update the warehouse table with the returned column from the staging table
+        sql = f"""
+            UPDATE `{project_id}.{warehouse_dataset}.{warehouse_table_name}` AS T
+            SET T.returned = S.returned
+            FROM `{project_id}.{dataset_staging}.{staging_table_name}` AS S
+            WHERE T.order_id = S.order_id
+        """
+
+        # Run the query
+        query_job = client.query(sql)
+        query_job.result()
+
+        print(f"Updated returned column in {warehouse_dataset}.{warehouse_table_name} using staging data.")
+
 ```
 
 ## Usage
