@@ -500,6 +500,17 @@ def join_staging_with_warehouse_tables(project_id, dataset_staging, staging_tabl
 
 This repository contains the implementation of a warehouse schema and data pipeline for a global superstore company. The data for the warehouse is extracted from two datasets: orders and returns. The warehouse schema defines the structure and relationships of the data that will be stored, including fact and dimesnsion tables that are created withe `create_warehouse_schema` . The data pipeline, implemented using several ETL processes, is responsible for extracting the data from the source datasets, transforming it into the appropriate format, and loading it into the warehouse.
 
+First it is required to implement the warehouse schema using `create_warehouse_schema` function. 
+
+``` python
+#creating warehouse schema from json file
+project_id = "your project id"
+json_path = "your warehouse schema json file path"
+create_warehouse_schema(project_id = project_id, json_path = json_path)
+``` 
+
+Then, the data pipeline can be implemented using the `orders_pipeline` and `returns_pipeline` functions.
+
 Here is the the pipeline for the orders data containing `load_xlsx_to_bigquery`, `data_transform`, `generate_surrogate_keys` and `load_data_from_staging_to_warehouse` functions:
 
 ``` python
@@ -529,6 +540,32 @@ def returns_pipeline (csv_path , project_id , table_name, schema_file_path, colu
     dataset_warehouse = "warehouse"
     dataset_staging = "staging"
     join_staging_with_warehouse_tables(project_id, dataset_staging, staging_table_name, dataset_warehouse, warehouse_table_names)
+```
+
+Running the below two pipelines will perform all the ETL proccessings from extracting the data and loading it into the warehouse.
+
+``` python
+xlsx_path = "your orders dataset path - xlsx file"
+project_id = "your project id"
+table_name = "superstore"
+schema_file_path = "your staging schema file path"
+date_columns=["order_date", "ship_date"]
+columns_to_check=["customer_id", "order_date", "order_id", "product_id"]
+sk_json_file = "your surrogate key json file path"
+warehouse_table_names = ["date", "customer", "product", "fact_orders","fact_orders_customer", 
+                         "fact_orders_date", "fact_orders_product"]
+orders_pipeline(xlsx_path, project_id, table_name , schema_file_path, date_columns, columns_to_check, sk_json_file, warehouse_table_names)
+```
+
+``` python
+csv_path = "Your CSV file path"
+project_id = "your project id"
+table_name = "returns"
+schema_file_path = "your staging schema for returns file path"
+columns_to_check=["order_id"]
+warehouse_table_names = ["fact_orders"]
+returns_pipeline(csv_path , project_id , table_name, schema_file_path, columns_to_check, warehouse_table_names)
+
 ```
 
 
